@@ -22,6 +22,7 @@ import (
 var (
 	oidEmailAddress = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 )
+var algoFlag *string
 
 func main() {
 	keyFlag := flag.String("key", "", "")
@@ -29,6 +30,7 @@ func main() {
 	orgFlag := flag.String("org", "", "")
 	emailFlag := flag.String("email", "", "")
 	outFlag := flag.String("out", "out.csr", "")
+	algoFlag = flag.String("algo", "", "")
 	flag.Parse()
 
 	oauthClient, err := google.DefaultClient(context.Background(), cloudkms.CloudPlatformScope)
@@ -76,7 +78,36 @@ func main() {
 	// TODO Make this a flag or read from s.PublicKey?
 	//      https://cloud.google.com/kms/docs/algorithms
 	//      https://cloud.google.com/kms/docs/reference/rest/v1/projects.locations.keyRings.cryptoKeys#CryptoKeyVersionTemplate
-	template.SignatureAlgorithm = x509.ECDSAWithSHA256 // x509.SHA256WithRSAPSS
+	switch *algoFlag {
+	    case "SHA256WithRSA":
+	        template.SignatureAlgorithm = x509.SHA256WithRSA
+	    case "SHA384WithRSA":
+	        template.SignatureAlgorithm = x509.SHA384WithRSA
+	    case "SHA512WithRSA":
+	        template.SignatureAlgorithm = x509.SHA512WithRSA
+	    case "DSAWithSHA1":
+	        template.SignatureAlgorithm = x509.DSAWithSHA1
+	    case "DSAWithSHA256":
+	        template.SignatureAlgorithm = x509.DSAWithSHA256
+	    case "ECDSAWithSHA1":
+	        template.SignatureAlgorithm = x509.ECDSAWithSHA1
+	    case "ECDSAWithSHA256":
+	        template.SignatureAlgorithm = x509.ECDSAWithSHA256
+	    case "ECDSAWithSHA384":
+	        template.SignatureAlgorithm = x509.ECDSAWithSHA384
+	    case "ECDSAWithSHA512":
+	        template.SignatureAlgorithm = x509.ECDSAWithSHA512
+	    case "SHA256WithRSAPSS":
+	        template.SignatureAlgorithm = x509.SHA256WithRSAPSS
+	    case "SHA384WithRSAPSS":
+	        template.SignatureAlgorithm = x509.SHA384WithRSAPSS
+	    case "SHA512WithRSAPSS":
+	        template.SignatureAlgorithm = x509.SHA512WithRSAPSS
+	    // case "PureEd25519":
+	    //     template.SignatureAlgorithm = x509.PureEd25519
+	    default:
+	        log.Fatal("Invalid algo #1")
+	}
 
 	f, err := os.Create(*outFlag)
 	if err != nil {
@@ -128,10 +159,42 @@ func (g *GoogleKMS) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) 
 	// API expects the digest to be base64 encoded
 	digest64 := base64.StdEncoding.EncodeToString(digest)
 
-	req := &cloudkms.AsymmetricSignRequest{
-		Digest: &cloudkms.Digest{
-			Sha256: digest64, // TODO: sha256 needs to follow sign algo
-		},
+	var req *cloudkms.AsymmetricSignRequest
+    switch *algoFlag {
+	    case "SHA256WithRSA":
+	        fallthrough
+	    case "DSAWithSHA256":
+	        fallthrough
+	    case "ECDSAWithSHA256":
+	        fallthrough
+	    case "SHA256WithRSAPSS":
+	        req = &cloudkms.AsymmetricSignRequest{
+            		Digest: &cloudkms.Digest{
+            			Sha256: digest64,
+            		},
+            	}
+	    // case "SHA384WithRSA":
+	    //     fallthrough
+	    case "ECDSAWithSHA384":
+	    //    fallthrough
+	    // case "SHA384WithRSAPSS":
+	        req = &cloudkms.AsymmetricSignRequest{
+            		Digest: &cloudkms.Digest{
+            			Sha384: digest64,
+            		},
+            	}
+	    case "SHA512WithRSA":
+	        fallthrough
+	    case "ECDSAWithSHA512":
+	        fallthrough
+	    case "SHA512WithRSAPSS":
+	        req = &cloudkms.AsymmetricSignRequest{
+            		Digest: &cloudkms.Digest{
+            			Sha512: digest64,
+            		},
+            	}
+	    default:
+	        log.Fatal("Invalid algo #2 ")
 	}
 
 	response, err := g.Client.Projects.Locations.KeyRings.CryptoKeys.CryptoKeyVersions.
