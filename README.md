@@ -10,13 +10,25 @@ I would've done it with `openssl`, but there is no Google Cloud KMS engine avail
 
 ```
 go build -o csr
-./csr -key <key-resource-id> -out my.csr --common-name MyOrg
+./csr -key <key-resource-id> -algo <sign algorithm> -out my.csr --common-name MyOrg
 ```
 
 Key Resource Id has the following format:
 
 ```
 projects/xxx/locations/xxx/keyRings/xxx/cryptoKeys/xxx/cryptoKeyVersions/xxx
+```
+
+Sign Algorithm has the following value of values: 
+```
+SHA256WithRSA
+SHA512WithRSA
+DSA256WithRSA
+SHA256WithRSAPSS
+SHA512WithRSAPSS
+ECDSAWithSHA256
+ECDSAWithSHA384
+ECDSAWithSHA512
 ```
 
 You can verify `my.csr` with:
